@@ -259,7 +259,7 @@ public class MediaPlayerService extends Service {
     void updateNotification(boolean isPlaying, String title, String desc) {
         if (views != null) {
             views.setTextViewText(R.id.tv_name, title);
-            if (desc != null) views.setTextViewText(R.id.tv_author, desc);
+            if (desc != null) views.setTextViewText(R.id.tv_author, desc.substring(0,7));
             if (isPlaying) {
                 views.setImageViewResource(R.id.iv_pause, android.R.drawable.ic_media_pause);
             } else {
