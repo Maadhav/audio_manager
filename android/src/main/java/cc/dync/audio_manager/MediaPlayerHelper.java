@@ -3,11 +3,14 @@ package cc.dync.audio_manager;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaDataSource;
 import android.media.MediaPlayer;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Message;
 import android.os.PowerManager;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -15,6 +18,11 @@ import android.view.SurfaceView;
 
 import androidx.annotation.RequiresApi;
 
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Objects;
 
 /**
@@ -149,7 +157,7 @@ public class MediaPlayerHelper {
                     service = (MediaPlayerService) args[0];
                     service.updateNotification(isPlaying(), mediaInfo.title, mediaInfo.desc);
                     if (mediaInfo.cover != null) {
-                        service.updateCover(mediaInfo.cover);
+                        updateCover(mediaInfo.cover);
                     }
                     break;
                 case playOrPause:
@@ -162,7 +170,7 @@ public class MediaPlayerHelper {
                     onStatusCallbackNext(CallBackState.previous);
                     break;
                 case stop:
-                    stop();
+                    release();
                     break;
             }
         });
@@ -180,9 +188,23 @@ public class MediaPlayerHelper {
         return instance;
     }
 
-    MediaPlayerHelper updateCover(String cover) {
+    MediaPlayerHelper updateCover(String url) {
         if (service == null) return instance;
-        service.updateCover(cover);
+        if (url.contains("http")) {
+            new Thread(() -> {
+                Bitmap bitmap = getBitmapFromUrl(url);
+                service.updateCover(bitmap);
+            }).start();
+            return instance;
+        }
+        try {
+            AssetManager am = context.getAssets();
+            InputStream inputStream = am.open(url);
+            service.updateCover(BitmapFactory.decodeStream(inputStream));
+
+        } catch (IOException e) {
+            onStatusCallbackNext(CallBackState.error, e.toString());
+        }
         return instance;
     }
 
@@ -379,26 +401,24 @@ public class MediaPlayerHelper {
     /**
      * 停止资源
      */
-//    public void stop() {
-//        if (uiHolder.player != null) {
-//            uiHolder.player.stop();
-//        }
-//        MediaPlayerService.unBind(context);
-//        refress_time_handler.removeCallbacks(refress_time_Thread);
-//        onStatusCallbackNext(CallBackState.stop);
-//    }
-
-    /**
-     * 释放资源
-     */
     public void stop() {
         if (uiHolder.player != null) {
             uiHolder.player.release();
             uiHolder.player = null;
         }
         onStatusCallbackNext(CallBackState.stop);
-        MediaPlayerService.unBind(context);
         refress_time_handler.removeCallbacks(refress_time_Thread);
+
+        curUrl = "";
+        isPrepare = false;
+    }
+
+    /**
+     * 释放资源
+     */
+    public void release() {
+        stop();
+        MediaPlayerService.unBind(context);
 
         if (wifiLock != null && wifiLock.isHeld())
             wifiLock.release();
@@ -631,7 +651,16 @@ public class MediaPlayerHelper {
     /**
      * 播放进度定时器
      */
-    private Handler refress_time_handler = new Handler();
+    private Handler refress_time_handler = new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what){
+                case ERROR:
+                    onStatusCallbackNext(CallBackState.error, msg.obj);
+                    break;
+            }
+        }
+    };
     private Runnable refress_time_Thread = new Runnable() {
         public void run() {
             refress_time_handler.removeCallbacks(refress_time_Thread);
@@ -648,6 +677,29 @@ public class MediaPlayerHelper {
             refress_time_handler.postDelayed(refress_time_Thread, delaySecondTime);
         }
     };
+
+    // 网络获取图片
+    private Bitmap getBitmapFromUrl(String urlString) {
+        Bitmap bitmap;
+        InputStream is;
+        try {
+            URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            is = new BufferedInputStream(connection.getInputStream());
+            bitmap = BitmapFactory.decodeStream(is);
+            connection.disconnect();
+            is.close();
+            return bitmap;
+        } catch (IOException e) {
+            Message msg = new Message();
+            msg.what = ERROR;
+            msg.obj = e.toString();
+            refress_time_handler.sendMessage(msg);
+        }
+        return null;
+    }
+
+    private static final int ERROR = 0x1;
 
     /* ***************************** Holder封装UI ***************************** */
 

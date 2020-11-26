@@ -27,8 +27,8 @@ class _MyAppState extends State<MyApp> {
   final list = [
     {
       "title": "Assets",
-      "desc": "local assets playback",
-      "url": "assets/audio.mp3",
+      "desc": "assets playback",
+      "url": "assets/xv.mp3",
       "coverUrl": "assets/ic_launcher.png"
     },
     {
@@ -45,13 +45,13 @@ class _MyAppState extends State<MyApp> {
 
     initPlatformState();
     setupAudio();
-    // loadFile();
+    loadFile();
   }
 
   @override
   void dispose() {
     // 释放所有资源
-    AudioManager.instance.stop();
+    AudioManager.instance.release();
     super.dispose();
   }
 
@@ -68,7 +68,8 @@ class _MyAppState extends State<MyApp> {
       print("$events, $args");
       switch (events) {
         case AudioManagerEvents.start:
-          print("start load data callback, curIndex is ${AudioManager.instance.curIndex}");
+          print(
+              "start load data callback, curIndex is ${AudioManager.instance.curIndex}");
           _position = AudioManager.instance.position;
           _duration = AudioManager.instance.duration;
           _slider = 0;
@@ -121,16 +122,22 @@ class _MyAppState extends State<MyApp> {
   }
 
   void loadFile() async {
+    // read bundle file to local path
+    final audioFile = await rootBundle.load("assets/aLIEz.m4a");
+    final audio = audioFile.buffer.asUint8List();
+
     final appDocDir = await getApplicationDocumentsDirectory();
-    // Please make sure the `test.mp3` exists in the document directory
-    final file = File("${appDocDir.path}/test.mp3");
+    print(appDocDir);
+
+    final file = File("${appDocDir.path}/aLIEz.m4a");
+    file.writeAsBytesSync(audio);
+
     AudioInfo info = AudioInfo("file://${file.path}",
-        title: "file",
-        desc: "local file",
-        coverUrl: "https://homepages.cae.wisc.edu/~ece533/images/baboon.png");
+        title: "file", desc: "local file", coverUrl: "assets/aLIEz.jpg");
 
     list.add(info.toJson());
     AudioManager.instance.audioList.add(info);
+    setState(() {});
   }
 
   Future<void> initPlatformState() async {

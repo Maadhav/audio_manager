@@ -10,9 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.content.res.AssetManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
@@ -22,11 +20,6 @@ import android.widget.RemoteViews;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.Objects;
 
 public class MediaPlayerService extends Service {
@@ -179,10 +172,9 @@ public class MediaPlayerService extends Service {
 
     private void setupNotification() {
         // 设置点击通知结果
-        Intent intent = new Intent(this, MediaPlayerService.context.getClass());
+//        Intent intent = new Intent("android.flutter.audio_manager.activity");
+        Intent intent = new Intent(this, AudioManagerPlugin.class);
         PendingIntent contentPendingIntent = PendingIntent.getActivity(this, CONTENT_PENDING_REQUESTS, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-//        Intent delIntent = new Intent(this, MediaPlayerService.class);
-//        PendingIntent delPendingIntent = PendingIntent.getService(this, DELETE_PENDING_REQUESTS, delIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         // 自定义布局
         views = new RemoteViews(getPackageName(), R.layout.layout_mediaplayer);
@@ -230,25 +222,9 @@ public class MediaPlayerService extends Service {
         startForeground(NOTIFICATION_PENDING_ID, builder.build());
     }
 
-    void updateCover(String url) {
-        if (url.contains("http")) {
-            new Thread(() -> {
-                Bitmap bitmap = getBitmapFromUrl(url);
-                if (bitmap != null) {
-                    views.setImageViewBitmap(R.id.image, bitmap);
-                    notificationManager.notify(NOTIFICATION_PENDING_ID, builder.build());
-                }
-            }).start();
-            return;
-        }
-        try {
-            AssetManager am = context.getAssets();
-            InputStream inputStream = am.open(url);
-            views.setImageViewBitmap(R.id.image, BitmapFactory.decodeStream(inputStream));
-            notificationManager.notify(NOTIFICATION_PENDING_ID, builder.build());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    void updateCover(Bitmap bitmap) {
+        views.setImageViewBitmap(R.id.image, bitmap);
+        notificationManager.notify(NOTIFICATION_PENDING_ID, builder.build());
     }
 
     void updateCover(int srcId) {
@@ -269,29 +245,5 @@ public class MediaPlayerService extends Service {
 
         // 刷新notification
         notificationManager.notify(NOTIFICATION_PENDING_ID, builder.build());
-    }
-
-    // 网络获取图片
-    private Bitmap getBitmapFromUrl(String urlString) {
-        Bitmap bitmap;
-        InputStream is = null;
-        try {
-            URL url = new URL(urlString);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            is = new BufferedInputStream(connection.getInputStream());
-            bitmap = BitmapFactory.decodeStream(is);
-            connection.disconnect();
-            return bitmap;
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                assert is != null;
-                is.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return null;
     }
 }
