@@ -25,14 +25,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Objects;
 
-/**
- * 多媒体播放
- */
+
 public class MediaPlayerHelper {
     private static final String TAG = MediaPlayerHelper.class.getSimpleName();
 
     private String[] ext = {".3gp", ".3GP", ".mp4", ".MP4", ".mp3", ".ogg", ".OGG", ".MP3", ".wav", ".WAV"};//定义我们支持的文件格式
-    private Holder uiHolder;//UI的容器
+    private Holder uiHolder;
     private Context context;
     private MediaInfo mediaInfo = new MediaInfo("title", null);
     private static MediaPlayerHelper instance;
@@ -81,23 +79,23 @@ public class MediaPlayerHelper {
      * 状态枚举
      */
     public enum CallBackState {
-        buffering("MediaPlayer--更新流媒体缓存状态"),
+        buffering("MediaPlayer"),
         next("next"),
         previous("previous"),
         playOrPause("playOrPause"),
         stop("stop"),
-        ended("播放结束"),
-        error("播放错误"),
-        FORMAT_NOT_SUPPORT("音视频格式可能不支持"),
-        INFO("播放开始"),
-        ready("准备完毕"),
-        progress("播放进度回调"),
-        seekComplete("拖动完成"),
-        VIDEO_SIZE_CHANGE("读取视频大小"),
-        SURFACE_CREATE("SurfaceView--Holder创建"),
-        SURFACE_DESTROY("SurfaceView--Holder销毁"),
-        SURFACE_CHANGE("SurfaceView--Holder改变"),
-        SURFACE_NULL("SurfaceView--还没初始化");
+        ended("ended"),
+        error("error"),
+        FORMAT_NOT_SUPPORT("FORMAT_NOT_SUPPORT"),
+        INFO("INFO"),
+        ready("ready"),
+        progress("progress"),
+        seekComplete("seekComplete"),
+        VIDEO_SIZE_CHANGE("VIDEO_SIZE_CHANGE"),
+        SURFACE_CREATE("SurfaceView--Holder"),
+        SURFACE_DESTROY("SurfaceView--Holder"),
+        SURFACE_CHANGE("SurfaceView--Holder"),
+        SURFACE_NULL("SurfaceView-NULL");
 
         private final String state;
 
@@ -331,7 +329,7 @@ public class MediaPlayerHelper {
                 return false;
             }
         } else {
-            Log.v(TAG, "对不起请升级手机系统至Android6.0及以上");
+            Log.v(TAG, "Android6.0");
             return false;
         }
     }
@@ -371,8 +369,8 @@ public class MediaPlayerHelper {
 
     private boolean canPlay() {
         if (!isPrepare) {
-            Log.e(TAG, "媒体资源加载失败");
-            onStatusCallbackNext(CallBackState.error, "媒体资源加载失败");
+            Log.e(TAG, "Media resource failed to load");
+            onStatusCallbackNext(CallBackState.error, "Media resource failed to load");
         }
         return isPrepare;
     }
